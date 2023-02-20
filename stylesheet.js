@@ -2,7 +2,12 @@ import {
     StyleSheet
   } from 'react-native';
 
-export default styles = StyleSheet.create({
+export const theme = StyleSheet.create({
+  primaryColor: "#47bf90",
+  primaryColorFaded: '#47bf90aa',
+})
+
+export const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-start',
@@ -15,7 +20,6 @@ export default styles = StyleSheet.create({
   },
 
   stationCard:{
-    flex: 1,
     margin: 10,
     backgroundColor: 'white',
     padding: 10,
@@ -35,23 +39,11 @@ export default styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginTop: 5
-    //marginHorizontal: 15,
-    //justifyContent: 'space-evenly'
-  },
-
-  stationCardBtn: {
-    //backgroundColor: '#000000c0',
-    backgroundColor: '#47bf90',
-    padding: 5,
-    paddingHorizontal: 10,
-    margin: 3,
-    borderRadius: 5,
-    marginLeft: '45%'
   },
 
   regionCardBtn:{
     maxHeight: 40,
-    backgroundColor: '#47bf90',
+    backgroundColor: theme.primaryColor,
     paddingHorizontal: 10,
     margin: 3,
     padding: 5,
@@ -76,7 +68,21 @@ export default styles = StyleSheet.create({
 
   stationCardRegion:{
     fontSize: 18,
-    color: "black"
+    color: 'black',
+  },
+
+  stationCardRegionHeader:{
+    display: 'flex',
+    flexShrink: 1,
+    fontSize: 16,
+    backgroundColor: theme.primaryColor,
+    color: 'white',
+    padding: 5,
+    paddingHorizontal: 15,
+    borderRadius: 50,
+    margin: 5, 
+    textTransform: 'uppercase', 
+    fontWeight: 700
   },
 
   box: {
@@ -97,28 +103,28 @@ export default styles = StyleSheet.create({
   aboutTitle:{
     margin: 15,
     fontSize: 22,
-    color: '#47bf90',
+    color: theme.primaryColor,
     fontWeight: 900,
   },
 
   aboutBtn:{
     margin: 5,
     backgroundColor: 'transparent',
-    borderColor: '#47bf90',
+    borderColor: theme.primaryColor,
     borderWidth: 1,
     borderRadius: 40,
     paddingHorizontal: 10,
   },
 
-  //Modal Stuff
+  //Modal Content
 
   centeredView: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    //marginTop: 22,
   },
   modalView: {
+    paddingTop: 30,
     margin: 5,
     backgroundColor: 'white',
     borderRadius: 20,
@@ -136,12 +142,15 @@ export default styles = StyleSheet.create({
   button: {
     borderRadius: 20,
     padding: 10,
-    elevation: 2,
   },
   buttonClose: {
-    paddingHorizontal: 30,
-    marginTop: 10,
-    backgroundColor: '#47bf90',
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    padding: 5,
+    paddingHorizontal: 10,
+    //margin: 10,
+    backgroundColor: theme.primaryColor,
   },
   textStyle: {
     color: 'white',
@@ -153,9 +162,16 @@ export default styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  label:{
+    fontSize: 18,
+    color: theme.primaryColor,
+    marginBottom: 10,
+  },
+
   //Search bar
 
   searchBar: {
+    width: '100%',
     display: 'flex',
     flexDirection: 'row',
     alignItems: 'center',
@@ -163,20 +179,37 @@ export default styles = StyleSheet.create({
   },
 
   searchBarText: {
-    color: '#47bf90',
+    color: theme.primaryColor,
     fontWeight: 900,
     fontSize: 18,
     textTransform: 'uppercase'
   },
 
   searchBarInput: {
+    color: theme.primaryColor,
     fontSize: 16,
-    width: '60%',
+    width: 200,
     height: 40,
     margin: 12,
-    borderRadius: 0,
-    borderColor: '#47bf90',
-    borderBottomWidth: 1,
+    borderRadius: 5,
+    borderColor: theme.primaryColorFaded,
+    borderWidth: 1,
+  },
+
+  //Header
+  
+  headerStyle: {
+    backgroundColor: theme.primaryColor,
+    display: 'flex',
+    flexDirection: 'row',
+    height: 50,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingHorizontal: 10
+  },
+
+  headerTitleBar:{
+    display: 'flex', flexDirection: 'row', justifyContent: 'center', flex: 1, alignItems: 'center'
   },
 
 })

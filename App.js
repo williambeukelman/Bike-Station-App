@@ -1,139 +1,150 @@
-import React, {useState, useEffect, useMemo} from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Modal,
   View,
   Pressable,
   Text,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   TextInput
 } from 'react-native';
+import DropDownPicker from 'react-native-dropdown-picker';
 import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { store, set, setRegion } from './store'
 import { Provider, useSelector, useDispatch } from 'react-redux'
-import { WebView } from 'react-native-webview';
 import { getHeaderTitle } from '@react-navigation/elements';
 import Icon from 'react-native-ionicons'
-import './stylesheet.js'
+import { theme, styles } from './stylesheet.js'
+import About from './About'
+import MapPage from './Map'
 
-const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
+
+const LoadingBox = () => {
+  return (
+    <View style={styles.container}>
+      <View style={[styles.stationCard, { flexDirection: 'row', justifyContent: 'center', width: "50%", flex: 0, margin: '25%' }]}>
+        <View>
+          <Text style={styles.stationCardName}>Loading...</Text>
+        </View>
+      </View>
+    </View>
+  )
+}
+
+const topBar = ({ navigation, route, options }) => {
+  const title = getHeaderTitle(options, route.name);
+  return (
+    <View style={options.headerStyle}>
+      <TouchableOpacity onPress={navigation.openDrawer} style={styles.icons}>
+        <Icon name="md-menu" size={28} color="white" />
+      </TouchableOpacity>
+      <View style={styles.headerTitleBar}>
+        <Text style={[
+          {
+            color: 'white', fontSize: 18, paddingHorizontal: 15
+          }]}>
+          <Icon name='bicycle' />
+        </Text>
+        <Text style={[
+          {
+            color: 'white', letterSpacing: 2.8, fontSize: 18, textTransform: 'uppercase',
+            fontWeight: 700
+          }]}>
+          {title}</Text>
+      </View>
+    </View>
+  )
+}
+
 
 const AppInner = () => {
   const Data = useSelector((state) => state.Data.value)
   const RegionData = useSelector((state) => state.RegionData.value)
-  const [filterBy, setfilterBy] = useState('')
   const [searchText, onChangeSearchText] = useState("")
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalItem, setModalItem] = useState({"acceptsCard": true, "acceptsKey": true, "capacity": 0, "kiosk": true, "name": "No Station", "region": "0"});
+  const [filtersVisible, setfiltersVisible] = useState(false);
+  const [modalItem, setModalItem] = useState({ "acceptsCard": true, "acceptsKey": true, "capacity": 0, "kiosk": true, "name": "No Station", "region": "0" });
   const dispatch = useDispatch()
+  const [openRegions, setOpenRegions] = useState(false);
+  const [valueRegions, setValueRegions] = useState(null);
+  const [itemsRegions, setItemsRegions] = useState([]);
+  const [searchboxText, setSearchText] = useState("");
 
-  const fetchRegionData = async () => {
+  const fetchData = async (url, region) => {
     console.log("Fetching data")
-    try{
+    try {
       let response = await fetch(
-        'https://gbfs.citibikenyc.com/gbfs/en/system_regions.json'
+        url
       );
       let json = await response.json()
-      json = json['data']['regions']
-      let arr = {}
-      json.map(e => {arr[e.name] = e})
-      json = Object.values(arr)
-      dispatch(setRegion(json))
-    } catch (error) {
-      console.error(error)
-    }
-  }
-
-  const fetchData = async () => {
-    console.log("Fetching data")
-    try{
-      let response = await fetch(
-        'https://gbfs.citibikenyc.com/gbfs/en/station_information.json'
-      );
-      let json = await response.json()
-      dispatch(set(json['data']['stations']))
+      if (!region) {
+        dispatch(set(json['data']['stations']))
+      } else {
+        json = json['data']['regions']
+        let arr = {}
+        json.map(e => { arr[e.name] = e })
+        json = Object.values(arr)
+        dispatch(setRegion(json))
+      }
     } catch (error) {
       console.error(error)
     }
   }
 
   useEffect(() => {
-    fetchData()
-    fetchRegionData()
+    if (Object.keys(Data).length < 1) {
+      fetchData(url = 'https://gbfs.citibikenyc.com/gbfs/en/station_information.json')
+      fetchData(url = 'https://gbfs.citibikenyc.com/gbfs/en/system_regions.json', region = true)
+    }
   }, []);
-  
-  const MapPage = () => {
-    map_html = `
-    <iframe src="https://docs.google.com/viewerng/viewer?url=https://www.nyc.gov/html/dot/downloads/pdf/nyc-bike-map-2022.pdf&embedded=true" frameborder="0" height="100%" width="100%">
-    </iframe>
-    `
-    return (
-      <SafeAreaView style={{ flex: 1 }}>
-        <WebView 
-          style={{flex: 1}}
-          originWhitelist={['*']}
-          source={{ html: map_html }}
-        />
-      </SafeAreaView>
-    )
-  }
 
-  const About = ({navigation}) => {
-    const navHome = () => navigation.navigate('Home')
-    return (
-      <View style={[styles.container, {justifyContent: 'center', alignItems: 'center'}]}>
-        <Text style={styles.aboutTitle}>About Bike Share</Text>
-        <Text style={styles.aboutText}>
-        Bike share is an innovative mode of transportation that allows users to make trips using publicly available bikes. It consists of a fleet of specially designed, sturdy and durable bikes that are locked into a network of docking stations throughout the service area. The bikes can be unlocked from one station and returned to any other station in the system, making bike share ideal for short, one-way trips.
-        </Text>
-        <TouchableOpacity style={styles.aboutBtn} onPress={navHome}>
-          <Text style={[styles.aboutText, {color: '#47bf90'}]}>View Stations</Text>
-        </TouchableOpacity>
-      </View>
-    )
-  }
+  useEffect(() => {
+    if (Object.keys(RegionData).length > 0) {
+      setItemsRegions([{ "label": "All Regions", "value": "" }, ...RegionData.map((e) => { return ({ "label": e.name, "value": e.region_id }) })])
+    }
+  }, [RegionData])
 
   const StationCard = props => {
-    const {name, kiosk, capacity, region, acceptsCard, acceptsKey} = props
-    const Iconkiosk = (kiosk) ? "#47bf90" : "gray"
-    const IconacceptsCard = (acceptsCard) ? "#47bf90" : "gray"
-    const IconacceptsKey = (acceptsKey) ? "#47bf90" : "gray"
-    region_name = RegionData.filter((e) => e.region_id === region)[0]['name']
-    const detailsAction = (name) => {
-      setModalVisible(true);
-      setModalItem(name);
+    const { name, kiosk, capacity, region, acceptsCard, acceptsKey } = props
+    const Iconkiosk = (kiosk) ? theme.primaryColor : "gray"
+    const IconacceptsCard = (acceptsCard) ? theme.primaryColor : "gray"
+    const IconacceptsKey = (acceptsKey) ? theme.primaryColor : "gray"
+    try {
+      region_name = RegionData.filter((e) => e.region_id === region)[0]['name']
+    } catch {
+      region_name = "Missing region"
     }
-    return(
-      <View style={styles.stationCard}>
-        <Text style={styles.stationCardName}>{name}</Text>
-        <Text style={styles.stationCardCapacity}>Capacity: {capacity}</Text>
-        <Text style={styles.stationCardRegion}>Region: {region_name}</Text>
-        <View style={styles.stationCardIcons}>
-          <Icon name="compass" color={Iconkiosk}/>
-          <Icon name="card" color={IconacceptsCard}/>
-          <Icon name="key" color={IconacceptsKey}/>
-          <TouchableOpacity style={styles.stationCardBtn} onPress={() => detailsAction(name)}>
-            <Text style={styles.stationCardBtnText}>Details</Text>
-          </TouchableOpacity>
+    const detailsAction = (name) => {
+      setModalItem(name);
+      setModalVisible(true);
+    }
+    return (
+      <Pressable onPress={() => detailsAction(name)}>
+        <View style={styles.stationCard}>
+          <Text style={styles.stationCardName}>{name}</Text>
+          <Text style={styles.stationCardCapacity}>Capacity: {capacity}</Text>
+          <Text style={styles.stationCardRegion}>Region: {region_name}</Text>
+          <View style={styles.stationCardIcons}>
+            <Icon name="compass" color={Iconkiosk} />
+            <Icon name="card" color={IconacceptsCard} />
+            <Icon name="key" color={IconacceptsKey} />
+          </View>
         </View>
-      </View>
+      </Pressable>
     )
   }
 
   const ModalCard = () => {
-    //let item = {"acceptsCard": true, "acceptsKey": true, "capacity": 0, "kiosk": true, "name": "No Station", "region_id": "0", "rental_methods": [], "station_type": '', "lat": 0, "long": 0}
     item = Data.filter(e => e.name.includes(modalItem))[0]
     let region_name = ""
-    try{ region_name = RegionData.filter((e) => e.region_id === item.region_id)[0]['name'] }catch{ console.log("Missing region") }
-    
-    const Iconkiosk = (item.has_kiosk) ? "#47bf90" : "gray"
-    const IconacceptsCard = (item.rental_methods.includes("KEY")) ? "#47bf90" : "gray"
-    const IconacceptsKey = (item.rental_methods.includes("CREDITCARD")) ? "#47bf90" : "gray"
-    return(
+    try { region_name = RegionData.filter((e) => e.region_id === item.region_id)[0]['name'] } catch { region_name = "Missing region" }
+
+    const Iconkiosk = (item.has_kiosk) ? theme.primaryColor : "gray"
+    const IconacceptsCard = (item.rental_methods.includes("KEY")) ? theme.primaryColor : "gray"
+    const IconacceptsKey = (item.rental_methods.includes("CREDITCARD")) ? theme.primaryColor : "gray"
+    return (
       <View>
         <Text style={styles.stationCardName}>{modalItem}</Text>
         <Text style={styles.stationCardCapacity}>Capacity: {item.capacity}</Text>
@@ -142,230 +153,196 @@ const AppInner = () => {
         <Text style={styles.stationCardCapacity}>Lat: {item.lat}</Text>
         <Text style={styles.stationCardCapacity}>Lon: {item.lon}</Text>
         <View style={styles.stationCardIcons}>
-          <Icon name="compass" color={Iconkiosk}/>
-          <Icon name="card" color={IconacceptsCard}/>
-          <Icon name="key" color={IconacceptsKey}/>
+          <Icon name="compass" color={Iconkiosk} />
+          <Icon name="card" color={IconacceptsCard} />
+          <Icon name="key" color={IconacceptsKey} />
         </View>
       </View>
     )
   }
 
-  const Station = () => {
-    if(Object.keys(Data).length > 0){
+  const FilterModalContent = () => {
+    return (
+      <View>
+        <Text style={styles.label}>Region</Text>
+        <DropDownPicker
+          open={openRegions}
+          value={valueRegions}
+          items={itemsRegions}
+          setOpen={setOpenRegions}
+          setValue={setValueRegions}
+          //setItems={setItemsRegions}
+          listMode="SCROLLVIEW"
+        />
+      </View>
+    )
+  }
 
-      function filter(){
-        let filtered = (filterBy == '') ? Data : Data.filter((e) => e.region_id == filterBy)
+  const FilterModal = () => {
+    return (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={filtersVisible}
+        useNativeDriver={true}
+        hardwareAccelerated={true}
+        onRequestClose={() => {
+          setfiltersVisible(false);
+        }}>
+        <View style={[styles.centeredView, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+          <View style={styles.modalView}>
+            <Pressable
+              style={[styles.button, styles.buttonClose]}
+              onPress={() => setfiltersVisible(false)}>
+              <Text style={styles.textStyle}><Icon name='close' size={16} /></Text>
+            </Pressable>
+            <FilterModalContent />
+          </View>
+        </View>
+      </Modal>
+    )
+  }
+
+  const StationModal = () => {
+    return (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        useNativeDriver={true}
+        hardwareAccelerated={true}
+        onRequestClose={() => {
+          setModalVisible(false);
+        }}>
+        <View style={[styles.centeredView, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+          <View style={styles.modalView}>
+            <ModalCard />
+            <Pressable
+              style={[styles.button, styles.buttonClose]}
+              onPress={() => setModalVisible(false)}>
+              <Text style={styles.textStyle}><Icon name='close' size={16} /></Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+    )
+  }
+
+  const Station = () => {
+    if (Object.keys(Data).length > 0) {
+
+      function filter() {
+        let filtered = (valueRegions == null || valueRegions == "") ? Data : Data.filter((e) => parseInt(e.region_id) == valueRegions)
         return filtered.filter((e) => e.name.includes(searchText))
       }
       const results = useMemo(() => {
         return filter();
-      }, [searchText, filterBy]);
+      }, [searchText, valueRegions]);
 
-      return(
-        <View style={styles.centeredView}>
-          <Modal
-            animationType="slide"
-            transparent={true}
-            visible={modalVisible}
-            useNativeDriver={true} 
-            hardwareAccelerated={true}
-            onRequestClose={() => {
-              setModalVisible(false);
-            }}>
-            <View style={styles.centeredView}>
-              <View style={styles.modalView}>
-                <ModalCard/>
-                <Pressable
-                  style={[styles.button, styles.buttonClose]}
-                  onPress={() => setModalVisible(false)}>
-                  <Text style={styles.textStyle}>Close</Text>
-                </Pressable>
-              </View>
-            </View>
-          </Modal>
-        <View style={styles.container}>
-          { (filterBy != '') ? <Text style={[styles.stationCardRegion, {margin: 5, textTransform: 'uppercase', fontWeight: 700}]}>Showing stations in region: {filterBy}</Text> : <></>}
-          { (searchText != '') ? <Text style={[styles.stationCardRegion, {margin: 5, textTransform: 'uppercase', fontWeight: 700}]}>Showing results for: {searchText}</Text> : <></>}
-          <FlatList
-          style={styles.stationList}
-          data={results}
-          initialNumToRender={5}
-          renderItem={({item}) => 
-        
-          <StationCard name={item.name} 
-          kiosk={item.has_kiosk}
-          capacity={item.capacity}
-          region={item.region_id}
-          acceptsKey={item.rental_methods.includes("KEY")}
-          acceptsCard={item.rental_methods.includes("CREDITCARD")}
-          />
+      return (
+        <View style={[styles.centeredView, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+          <FilterModal />
+          <StationModal />
+          <View style={styles.container}>
+            <FlatList
+              style={styles.stationList}
+              data={results}
+              initialNumToRender={5}
+              renderItem={({ item }) =>
 
-          }
-          keyExtractor={item => item.name}
-          ListHeaderComponent={
-            <View style={styles.searchBar}>
-              <Text style={styles.searchBarText}>Search: </Text>
-              <TextInput
-                style={styles.searchBarInput}
-                onSubmitEditing={(e) => onChangeSearchText(e.nativeEvent.text)}
-              />
-            </View>
-          }
-        />
+                <StationCard name={item.name}
+                  kiosk={item.has_kiosk}
+                  capacity={item.capacity}
+                  region={item.region_id}
+                  acceptsKey={item.rental_methods.includes("KEY")}
+                  acceptsCard={item.rental_methods.includes("CREDITCARD")}
+                />
 
-        </View>
+              }
+              keyExtractor={item => item.name}
+              ListHeaderComponent={
+                <StationHeader />
+              }
+            />
+
+          </View>
         </View>
       )
     } else {
-      return(
-        <View style={styles.centeredView}>
-            <View style={[styles.stationCard, {flexDirection: 'row', justifyContent: 'center', width: "50%", flex: 0}]}>
-                <Text style={styles.stationCardName}>Loading...</Text>
-            </View>
-        </View>
-      )}
-  }
-
-  const Region = ({navigation}) => {
-    const viewAllStations = () => {setfilterBy(''); navigation.navigate('By Station')}
-    const viewStations = (id) => { setfilterBy(id); navigation.navigate('By Station') }
-    if(RegionData != {}){
-      return(
-        <View style={styles.container}>
-          
-          <FlatList
-          style={styles.stationList}
-          data={RegionData}
-          renderItem={({item}) => 
-        
-          <View style={[styles.stationCard, {flexDirection: 'row', justifyContent: 'space-between'}]}>
-            <View>
-              <Text style={styles.stationCardName}>{item.name}</Text>
-              <Text style={styles.stationCardRegion}>Region: {item.region_id}</Text>
-            </View>
-            <TouchableOpacity style={styles.regionCardBtn} onPress={() => {viewStations(item.region_id)}}>
-              <Text style={styles.stationCardBtnText}>View Stations</Text>
-            </TouchableOpacity>
-          </View>
-          }
-          keyExtractor={item => item.region_id}
-          ListHeaderComponent={
-            <View style={[styles.stationCard, {flexDirection: 'row', justifyContent: 'space-between'}]}>
-              <View>
-                <Text style={styles.stationCardName}>All regions</Text>
-              </View>
-              <TouchableOpacity style={styles.regionCardBtn} onPress={viewAllStations}>
-                <Text style={styles.stationCardBtnText}>View Stations</Text>
-              </TouchableOpacity>
-            </View>
-          }
-        />
-
-        </View>
-      )
-    } else {
-      return(
-        <View style={styles.container}>
-          <View style={[styles.stationCard, {flexDirection: 'row', justifyContent: 'space-between'}]}>
-            <View>
-              <Text style={styles.stationCardName}>Loading...</Text>
-            </View>
-          </View>
-        </View>
+      return (
+        <LoadingBox />
       )
     }
   }
-  
-  const Main = ({navigation}) => {
+
+  const StationHeader = () => {
+    const name = (valueRegions != null && valueRegions != "") ? RegionData.filter((e) => e.region_id == valueRegions.toString())[0].name : "All Regions"
     return (
-      <Tab.Navigator screenOptions={{
-        tabBarActiveBackgroundColor: '#47bf90',
-        tabBarInactiveBackgroundColor: '#47bf90aa',
-        tabBarLabelStyle: {
-          color: 'white',
-          fontSize: 20,
-          fontWeight: 700,
-          textTransform: 'uppercase'
-        },
-        tabBarItemStyle: {
-          display: 'flex',
-          alignContent: 'center'
-        },
-        tabBarIcon: () => {},
-        tabBarLabelPosition: "beside-icon",
-      }}>
-        <Tab.Screen name="By Station" component={Station} options={{ headerShown: false }} />
-        <Tab.Screen name="By Region" component={Region} options={{ headerShown: false }} />
-      </Tab.Navigator>
+      <View>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchBarText}>Search: </Text>
+          <TextInput
+            style={styles.searchBarInput}
+            //onChangeText={setSearchText}
+            //value={searchboxText}
+            autoFocus={true}
+            onSubmitEditing={(e) => onChangeSearchText(e.nativeEvent.text)}
+          />
+          <TouchableOpacity style={styles.regionCardBtn} onPress={() => setfiltersVisible(true)}>
+            <Text style={styles.stationCardBtnText}>Filters</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start' }}>
+          {(valueRegions != null) ? <Text style={styles.stationCardRegionHeader}>Region: {name}</Text> : <></>}
+        </View>
+      </View>
     )
   }
 
   return (
     <NavigationContainer>
       <Drawer.Navigator initialRouteName="Home" screenOptions={{
-          headerStyle: {
-            backgroundColor: '#47bf90',
-            display: 'flex',
-            flexDirection: 'row',
-            height: 50,
-            justifyContent: 'flex-start',
-            alignItems: 'center',
-            paddingHorizontal: 10
-          },
-          drawerStyle: {
-            backgroundColor: '#47bf90',
-            width: 240,
-          },
-          drawerLabelStyle: {
-            color: 'white',
-            fontSize: 18,
-            textTransform: "uppercase"
-          },
-          header: ({ navigation, route, options }) => {
-            const title = getHeaderTitle(options, route.name);
-            return (
-              <View style={options.headerStyle}>
-                <TouchableOpacity onPress={navigation.openDrawer} style={styles.icons}>
-                  <Icon name="md-menu" size={28} color="white" />
-                </TouchableOpacity>
-                <View style={[{display: 'flex', flexDirection: 'row', justifyContent: 'center', flex: 1, alignItems: 'center'}]}>
-                  <Text style={[
-                  {color: 'white', letterSpacing: 5.8, fontSize: 18, textTransform: 'uppercase', 
-                  fontWeight: 700,
-                  }]}><Icon name='bicycle'/>{title}</Text>
-                </View>
-              </View>
-            )}
-        }}>
-        <Drawer.Screen name="Home" component={Main} options={{
-           title: 'Home',
-           drawerIcon: ({focused, size}) => (
-              <Icon
-                 name="home"
-                 size={size}
-                 color={focused ? '#fff' : '#ffffff90'}
-              />
-           ),
+        headerStyle: styles.headerStyle,
+        drawerStyle: {
+          backgroundColor: theme.primaryColor,
+          width: 240,
+        },
+        drawerLabelStyle: {
+          color: 'white',
+          fontSize: 18,
+          textTransform: "uppercase"
+        },
+        header: topBar
+      }}>
+        <Drawer.Screen name="Home" component={Station} options={{
+          title: 'Stations',
+          drawerIcon: ({ focused, size }) => (
+            <Icon
+              name="home"
+              size={size}
+              color={focused ? '#fff' : '#ffffff90'}
+            />
+          ),
         }} />
         <Drawer.Screen name="Map" component={MapPage} options={{
-           title: 'Map',
-           drawerIcon: ({focused, size}) => (
-              <Icon
-                 name="map"
-                 size={size}
-                 color={focused ? '#fff' : '#ffffff90'}
-              />
-           ),
+          title: 'Map',
+          drawerIcon: ({ focused, size }) => (
+            <Icon
+              name="map"
+              size={size}
+              color={focused ? '#fff' : '#ffffff90'}
+            />
+          ),
         }} />
         <Drawer.Screen name="About" component={About} options={{
-           title: 'About',
-           drawerIcon: ({focused, size}) => (
-              <Icon
-                 name="information-circle-outline"
-                 size={size}
-                 color={focused ? '#fff' : '#ffffff90'}
-              />
-           ),
+          title: 'About',
+          drawerIcon: ({ focused, size }) => (
+            <Icon
+              name="information-circle-outline"
+              size={size}
+              color={focused ? '#fff' : '#ffffff90'}
+            />
+          ),
         }} />
       </Drawer.Navigator>
     </NavigationContainer>
@@ -375,7 +352,7 @@ const AppInner = () => {
 const App = () => {
   return (
     <Provider store={store}>
-      <AppInner/>
+      <AppInner />
     </Provider>
   )
 }
